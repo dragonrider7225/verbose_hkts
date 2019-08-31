@@ -1,5 +1,5 @@
-#[allow(non_camel_case_types, bare_trait_objects)]
-pub struct forall_t;
+#[deprecated(since = "0.2.0", note = "")]
+pub type forall_t = !;
 
 pub struct Concrete<M: Unplug + Plug<A>, A> {
     pub unwrap: <M as Plug<A>>::result_t,

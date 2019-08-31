@@ -1,7 +1,7 @@
 [package]
 name = "type-plugs"
-version = "0.1.0"
-authors = ["Edmund Smith <edmund.pd.smith@gmail.com>"]
+version = "0.2.0"
+authors = ["Edmund Smith <edmund.pd.smith@gmail.com>", "Kevin Moonen <kevin.moonen99@gmail.com>"]
 readme = "readme.md"
 license = "MIT"
 keywords = ["monad", "hkt", "gat", "typelevel", "plug"]

@@ -1,3 +1,5 @@
+#![feature(never_type)]
+
 #[macro_use]
 pub mod core;
 pub mod applicative;
