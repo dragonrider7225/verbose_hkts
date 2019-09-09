@@ -1,26 +1,30 @@
-#[deprecated(since = "0.2.0", note = "")]
-pub type forall_t = !;
-
-pub struct Concrete<M: Unplug + Plug<A>, A> {
+pub struct Concrete<M, A>
+where
+    M: Unplug + Plug<A>,
+{
     pub unwrap: <M as Plug<A>>::result_t,
 }
 
-impl<M: Unplug + Plug<A>, A> Clone for Concrete<M, A>
+impl<M, A> Concrete<M, A>
 where
-    <M as Plug<A>>::result_t: Clone,
-    <M as Plug<A>>::result_t: Unplug<F = M, A = A>,
+    M: Unplug + Plug<A>,
 {
-    fn clone(&self) -> Self {
-        Concrete::of(self.unwrap.clone())
-    }
-}
-
-impl<M: Unplug + Plug<A>, A> Concrete<M, A> {
-    pub fn of<MA: Unplug<F = M, A = A> + Plug<A>>(x: MA) -> Self
+    pub fn of<MA>(x: MA) -> Concrete<M, A>
     where
+        MA: Unplug<F = M, A = A> + Plug<A>,
         M: Plug<A, result_t = MA>,
     {
         Concrete { unwrap: x }
+    }
+}
+
+impl<M, A> Clone for Concrete<M, A>
+where
+    M: Unplug + Plug<A>,
+    <M as Plug<A>>::result_t: Clone + Unplug<F = M, A = A>,
+{
+    fn clone(&self) -> Concrete<M, A> {
+        Concrete::of(self.unwrap.clone())
     }
 }
 
@@ -33,11 +37,17 @@ pub trait Plug<A>: Sized {
     type result_t: Plug<A> + Unplug;
 }
 
-impl<M: Plug<A> + Plug<B> + Unplug, A, B> Plug<B> for Concrete<M, A> {
+impl<M, A, B> Plug<B> for Concrete<M, A>
+where
+    M: Plug<A> + Plug<B> + Unplug,
+{
     type result_t = Concrete<M, B>;
 }
 
-impl<M: Plug<A> + Unplug, A> Unplug for Concrete<M, A> {
+impl<M, A> Unplug for Concrete<M, A>
+where
+    M: Plug<A> + Unplug,
+{
     type F = M;
     type A = A;
 }

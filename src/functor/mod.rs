@@ -1,49 +1,48 @@
-use core::*;
+use core::{Plug, Unplug};
 
 pub trait Functor: Unplug + Plug<unplug!(Self, A)> {
-    fn map<B, F>(f: F, s: Self) -> plug!(Self[B])
+    fn fmap<B, F>(self, f: F) -> plug!(Self[B])
     where
         Self: Plug<B>,
         F: Fn(Self::A) -> B;
 }
 
-impl<A> Functor for Box<A> {
-    fn map<B, F>(f: F, s: Self) -> plug!(Self[B])
+impl<T> Functor for Box<T> {
+    fn fmap<B, F>(self, f: F) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
     {
-        Box::new(f(*s))
+        Box::new(f(*self))
     }
 }
 
-impl<A> Functor for Vec<A> {
-    fn map<B, F>(f: F, s: Self) -> plug!(Self[B])
+impl<T> Functor for Vec<T> {
+    fn fmap<B, F>(self, f: F) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
     {
-        s.into_iter().map(f).collect()
+        self.into_iter().map(f).collect()
     }
 }
 
-impl<A> Functor for Option<A> {
-    fn map<B, F>(f: F, s: Self) -> plug!(Self[B])
+impl<T> Functor for Option<T> {
+    fn fmap<B, F>(self, f: F) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
     {
-        s.map(f)
+        self.map(f)
     }
 }
 
 #[cfg(test)]
-fn it_compiles<F: Functor, A, B, C>(
-    functor: F,
-    fun: impl Fn(A) -> B,
-    fun2: impl Fn(B) -> C,
-) -> <F as Plug<C>>::result_t
+pub fn it_compiles<A, B, C, F, G, T>(x: T, f: F, g: G) -> plug!(T[C])
 where
-    F: Plug<A> + Plug<B> + Plug<C> + Unplug<A = A>,
-    <F as Unplug>::F: Plug<A> + Plug<B> + Plug<C>,
+    T: Functor + Plug<A> + Plug<B> + Plug<C> + Unplug<A = A>,
+    unplug!(T, F): Plug<A>,
+    F: Fn(A) -> B,
+    G: Fn(B) -> C,
 {
-    let cmp = |x| fun2(fun(x));
-    Functor::map(cmp, functor)
+    // Would ideally also be writable as x.fmap(f).fmap(g), but Rust's type
+    // checker is not quite able to manage that through this kludge.
+    x.fmap(|x| g(f(x)))
 }

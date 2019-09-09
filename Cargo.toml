@@ -1,6 +1,6 @@
 [package]
 name = "type-plugs"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Edmund Smith <edmund.pd.smith@gmail.com>", "Kevin Moonen <kevin.moonen99@gmail.com>"]
 readme = "readme.md"
 license = "MIT"

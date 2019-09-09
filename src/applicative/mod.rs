@@ -1,9 +1,9 @@
-use core::*;
-use functor::*;
+use core::{Plug, Unplug};
+use functor::Functor;
 
 pub trait Applicative: Functor {
     fn pure(s: Self::A) -> Self;
-    fn app<B, F>(f: plug!(Self[F]), s: Self) -> plug!(Self[B])
+    fn ap<B, F>(self, f: plug!(Self[F])) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
         Self: Plug<F> + Plug<B> + Unplug,
@@ -11,50 +11,48 @@ pub trait Applicative: Functor {
         Self::F: Plug<F>;
 }
 
-impl<A> Applicative for Box<A> {
-    fn pure(a: A) -> Self {
-        Box::new(a)
+impl<T> Applicative for Box<T> {
+    fn pure(x: T) -> Box<T> {
+        Box::new(x)
     }
 
-    fn app<B, F>(f: plug!(Self[F]), s: Self) -> plug!(Self[B])
+    fn ap<B, F>(self, f: plug!(Self[F])) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
     {
-        Box::new((*f)(*s))
+        Box::new((*f)(*self))
     }
 }
 
-impl<A: Clone> Applicative for Vec<A> {
-    fn pure(a: A) -> Self {
-        vec![a]
+impl<T: Clone> Applicative for Vec<T> {
+    fn pure(x: T) -> Vec<T> {
+        vec![x]
     }
-    fn app<B, F>(fs: plug!(Self[F]), s: Self) -> plug!(Self[B])
+
+    fn ap<B, F>(self, f: plug!(Self[F])) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
         plug!(Self[F]): Clone,
     {
-        let flat: Vec<B> = Functor::map(|x: A| Functor::map(|f: F| f(x.clone()), fs.clone()), s)
-            .into_iter()
-            .flatten()
+        let ret: Vec<B> = self.into_iter()
+            .flat_map(|x: T| f.clone().fmap(|f: F| f(x.clone())))
             .collect();
-        flat
+        ret
     }
 }
 
-impl<A> Applicative for Option<A> {
-    fn pure(a: A) -> Self {
-        Some(a)
+impl<T> Applicative for Option<T> {
+    fn pure(x: T) -> Option<T> {
+        Some(x)
     }
-    fn app<B, F>(fs: plug!(Self[F]), s: Self) -> plug!(Self[B])
+
+    fn ap<B, F>(self, f: plug!(Self[F])) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> B,
     {
-        match fs {
-            Some(f) => match s {
-                Some(x) => Some(f(x)),
-                None => None,
-            },
-            None => None,
+        match (self, f) {
+            (Some(x), Some(f)) => Some(f(x)),
+            _ => None,
         }
     }
 }

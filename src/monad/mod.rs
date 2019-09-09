@@ -1,39 +1,39 @@
-use applicative::*;
-use core::*;
+use applicative::Applicative;
+use core::Plug;
 
 pub trait Monad: Applicative {
-    fn bind<F, B>(f: F, s: Self) -> plug!(Self[B])
+    fn bind<F, B>(self, f: F) -> plug!(Self[B])
     where
         Self: Plug<F> + Plug<B>,
         F: Fn(Self::A) -> plug!(Self[B]);
 }
 
-impl<A> Monad for Box<A> {
-    fn bind<F, B>(f: F, s: Self) -> plug!(Self[B])
+impl<T> Monad for Box<T> {
+    fn bind<F, B>(self, f: F) -> plug!(Self[B])
     where
         Self: Plug<F> + Plug<B>,
         F: Fn(Self::A) -> plug!(Self[B]),
     {
-        f(*s)
+        f(*self)
     }
 }
 
-impl<A: Clone> Monad for Vec<A> {
-    fn bind<F, B>(f: F, s: Self) -> plug!(Self[B])
+impl<T: Clone> Monad for Vec<T> {
+    fn bind<F, B>(self, f: F) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> plug!(Self[B]),
     {
-        let res: Vec<B> = s.into_iter().flat_map(f).collect();
+        let res: Vec<B> = self.into_iter().flat_map(f).collect();
         res
     }
 }
 
-impl<A> Monad for Option<A> {
-    fn bind<F, B>(f: F, s: Self) -> plug!(Self[B])
+impl<T> Monad for Option<T> {
+    fn bind<F, B>(self, f: F) -> plug!(Self[B])
     where
         F: Fn(Self::A) -> plug!(Self[B]),
     {
-        match s {
+        match self {
             Some(x) => f(x),
             None => None,
         }
@@ -42,25 +42,24 @@ impl<A> Monad for Option<A> {
 
 #[cfg(test)]
 mod tests {
+    use core::{Plug, Unplug};
     use super::*;
-    ///wew lad
-    fn higher_poly_demo<'a, M: Monad, A: 'a + Clone, B: 'a + Clone, F>(
-        m: M,
-        f: F,
-    ) -> <M as Plug<B>>::result_t
+
+    /// wew lad
+    fn higher_poly_demo<'a, M, A, B, F>(m: M, f: F) -> plug!(M[B])
     where
-        M: Plug<A> + Plug<B> + Unplug<A = A>, //+Plug<F>+Plug<Fn(A)-><M as Plug<B>>::result_t>,
-        M: Plug<Box<Fn(A) -> <M as Plug<B>>::result_t>>,
-        M: Plug<F>,
-        F: 'static,
-        <M as Unplug>::F: Plug<A> + Plug<B>,
-        <M as Plug<B>>::result_t: Monad + Unplug<A = B> + 'a,
-        <<M as Plug<B>>::result_t as Unplug>::F: Plug<B>,
-        F: Fn(A) -> B + 'a,
-        //F:Fn(A) -> <M as Plug<B>>::result_t + Clone,
+        M: Monad + Plug<A> + Plug<B> + Plug<F> + Unplug<A = A>
+            + Plug<Box<dyn Fn(A) -> plug!(M[B])>>,
+        A: 'a + Clone,
+        B: 'a + Clone,
+        F: 'static + Fn(A) -> B,
+        // F: Fn(A) -> plug!(M[B]) + Clone,
+        unplug!(M, F): Plug<A> + Plug<B>,
+        plug!(M[B]): 'a + Monad + Unplug<A = B>,
+        unplug!(plug!(M[B]), F): Plug<B>,
     {
         let cl = Box::new(move |x| Applicative::pure(f(x)));
-        Monad::bind::<Box<Fn(A) -> _>, B>(cl as Box<Fn(A) -> _>, m)
+        m.bind::<Box<dyn Fn(A) -> _>, B>(cl)
     }
 
     #[test]
@@ -69,8 +68,8 @@ mod tests {
         let p1 = Some(5);
         let p2 = vec![5];
         let p3 = Box::new(5);
-        assert!(higher_poly_demo(p1, f) == Some(6));
-        assert!(higher_poly_demo(p2, f) == vec![6]);
-        assert!(higher_poly_demo(p3, f) == Box::new(6));
+        assert_eq!(higher_poly_demo(p1, f), Some(6));
+        assert_eq!(higher_poly_demo(p2, f), vec![6]);
+        assert_eq!(higher_poly_demo(p3, f), Box::new(6));
     }
 }
